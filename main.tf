@@ -90,9 +90,10 @@ module "lambda_function" {
   attach_policy_json = true
   policy_json        = file("${path.module}/iam-policy.json")
 
-  # Add environment variables
-  environment_variables = var.lambda_environment_variables
+  cloudwatch_logs_retention_in_days = var.log_retention_days
 
+  environment_variables = var.lambda_environment_variables
+  
   tags = local.tags
 }
 
