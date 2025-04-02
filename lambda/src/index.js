@@ -31,6 +31,12 @@ app.post("/echo", async (c) => {
 	});
 });
 
+// Error-triggering endpoint
+app.get("/error", (c) => {
+	console.log("About to trigger an error");
+	throw new Error("This is a deliberately triggered error for testing");
+});
+
 // Lambda handler
 exports.handler = async (event, context) => {
 	console.log("Lambda event:", JSON.stringify(event, null, 2));

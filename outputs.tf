@@ -1,22 +1,28 @@
 # Lambda Function
-output "lambda_function_arn" {
-  description = "The ARN of the Lambda Function"
-  value       = module.lambda_function.lambda_function_arn
-}
+# output "lambda_function_arn" {
+#   description = "The ARN of the Lambda Function"
+#   value       = module.lambda_function.lambda_function_arn
+# }
 
-output "lambda_function_arn_static" {
-  description = "The static ARN of the Lambda Function. Use this to avoid cycle errors between resources (e.g., Step Functions)"
-  value       = module.lambda_function.lambda_function_arn_static
-}
+# output "lambda_function_arn_static" {
+#   description = "The static ARN of the Lambda Function. Use this to avoid cycle errors between resources (e.g., Step Functions)"
+#   value       = module.lambda_function.lambda_function_arn_static
+# }
 
-output "lambda_function_invoke_arn" {
-  description = "The Invoke ARN of the Lambda Function"
-  value       = module.lambda_function.lambda_function_invoke_arn
-}
+# output "lambda_function_invoke_arn" {
+#   description = "The Invoke ARN of the Lambda Function"
+#   value       = module.lambda_function.lambda_function_invoke_arn
+# }
 
 output "lambda_function_name" {
   description = "The name of the Lambda Function"
   value       = module.lambda_function.lambda_function_name
+}
+
+# API Gateway
+output "api_endpoint" {
+  description = "The HTTP API Gateway endpoint URL"
+  value       = module.apigateway.apigatewayv2_api_api_endpoint
 }
 
 # output "lambda_function_qualified_arn" {
@@ -65,10 +71,10 @@ output "lambda_function_name" {
 #   value       = module.lambda_function.lambda_layer_created_date
 # }
 
-# output "lambda_layer_source_code_size" {
-#   description = "The size in bytes of the Lambda Layer .zip file"
-#   value       = module.lambda_function.lambda_layer_source_code_size
-# }
+output "lambda_layer_source_code_size" {
+  description = "The size in bytes of the Lambda Layer .zip file"
+  value       = module.lambda_function.lambda_layer_source_code_size
+}
 
 # output "lambda_layer_version" {
 #   description = "The Lambda Layer version"
@@ -86,11 +92,11 @@ output "lambda_function_name" {
 #   value       = module.lambda_function.lambda_role_name
 # }
 
-# # CloudWatch Log Group
-# output "lambda_cloudwatch_log_group_arn" {
-#   description = "The ARN of the Cloudwatch Log Group"
-#   value       = module.lambda_function.lambda_cloudwatch_log_group_arn
-# }
+# CloudWatch Log Group
+output "lambda_cloudwatch_log_group_arn" {
+  description = "The ARN of the Cloudwatch Log Group"
+  value       = module.lambda_function.lambda_cloudwatch_log_group_arn
+}
 
 # # Docker Image by modules/docker-build
 # output "docker_image_uri" {
@@ -108,8 +114,3 @@ output "lambda_function_name" {
 #   value       = local.files
 # }
 
-# API Gateway
-output "api_endpoint" {
-  description = "The HTTP API Gateway endpoint URL"
-  value       = module.apigateway.apigatewayv2_api_api_endpoint
-}
