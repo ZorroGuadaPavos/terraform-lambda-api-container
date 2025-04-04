@@ -1,48 +1,51 @@
-data "aws_region" "current" {}
+terraform {
+  backend "s3" {
+    bucket         = ""
+    key            = ""
+    region         = ""
+    use_lockfile   = true
+  }
+}
 
-data "aws_caller_identity" "this" {}
-
-data "aws_ecr_authorization_token" "token" {}
-
+# Define local variables for resource naming
 locals {
-  project_name = var.project_name
+  name_prefix = "${var.company_name}-${var.project_name}-${terraform.workspace}"
+  function_name = "${local.name_prefix}-function"
 
-  # Dynamic tags
-  tags = merge(var.ecr_tags, {
-    Project = var.project_name
-  })
+  common_tags = {
+    Project     = var.project_name
+    Environment = terraform.workspace
+    ManagedBy   = "Terraform"
+    Company     = var.company_name
+  }
 
-  source_path   = var.source_path
-  path_include  = var.path_include
-  path_exclude  = var.path_exclude
-  files_include = setunion([for f in local.path_include : fileset(local.source_path, f)]...)
-  files_exclude = setunion([for f in local.path_exclude : fileset(local.source_path, f)]...)
+  files_include = setunion([for f in var.path_include : fileset(var.source_path, f)]...)
+  files_exclude = setunion([for f in var.path_exclude : fileset(var.source_path, f)]...)
   files         = sort(setsubtract(local.files_include, local.files_exclude))
-
-  dir_sha = sha1(join("", [for f in local.files : filesha1("${local.source_path}/${f}")]))
+  dir_sha       = sha1(join("", [for f in local.files : filesha1("${var.source_path}/${f}")]))
 }
 
 provider "aws" {
   region = var.aws_region
-
-  skip_metadata_api_check     = true
-  skip_region_validation      = true
-  skip_credentials_validation = true
 }
+
+data "aws_caller_identity" "this" {}
+data "aws_ecr_authorization_token" "token" {}
 
 provider "docker" {
   registry_auth {
-    address  = format("%v.dkr.ecr.%v.amazonaws.com", data.aws_caller_identity.this.account_id, data.aws_region.current.name)
+    address  = format("%v.dkr.ecr.%v.amazonaws.com", data.aws_caller_identity.this.account_id, var.aws_region)
     username = data.aws_ecr_authorization_token.token.user_name
     password = data.aws_ecr_authorization_token.token.password
   }
 }
 
+
 module "docker_build" {
   source = "terraform-aws-modules/lambda/aws//modules/docker-build"
 
   create_ecr_repo = true
-  ecr_repo        = local.project_name
+  ecr_repo        = "${local.name_prefix}-ecr"
   ecr_repo_lifecycle_policy = jsonencode({
     "rules" : [
       {
@@ -60,11 +63,11 @@ module "docker_build" {
     ]
   })
 
-  ecr_repo_tags = local.tags
+  ecr_repo_tags = local.common_tags
 
   use_image_tag = false
 
-  source_path = local.source_path
+  source_path = var.source_path
   platform    = var.docker_platform
 
   triggers = {
@@ -72,29 +75,48 @@ module "docker_build" {
   }
 }
 
+
 module "lambda_function" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.2.0"
 
-  function_name = "${local.project_name}-function"
-  description   = "Lambda function with container image"
+  function_name = local.function_name
+  description   = "Lambda function containing the logic to process requests from the API Gateway"
 
   create_package = false
 
   # Container Image
   package_type  = "Image"
-  architectures = var.lambda_architecture
+  architectures = ["x86_64"]
   image_uri     = module.docker_build.image_uri
 
   # Add CloudWatch Logs permissions
   attach_policy_json = true
-  policy_json        = file("${path.module}/iam-policy.json")
+  policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.this.account_id}:log-group:/aws/lambda/${local.function_name}:*",
+          "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.this.account_id}:log-group:/aws/lambda/${local.function_name}"
+        ]
+      }
+    ]
+  })
 
   cloudwatch_logs_retention_in_days = var.log_retention_days
 
-  environment_variables = var.lambda_environment_variables
+  environment_variables = {
+    ENVIRONMENT = terraform.workspace
+  }
   
-  tags = local.tags
+  tags = local.common_tags
 }
 
 # Create API Gateway
@@ -102,7 +124,7 @@ module "apigateway" {
   source  = "terraform-aws-modules/apigateway-v2/aws"
   version = "~> 1.1"
 
-  name          = "${local.project_name}-gateway"
+  name          = "${local.name_prefix}-gateway"
   protocol_type = "HTTP"
 
   create_api_domain_name = false
@@ -113,7 +135,7 @@ module "apigateway" {
     }
   }
   
-  tags = local.tags
+  tags = local.common_tags
 }
 
 # Add explicit permission for API Gateway to invoke Lambda
