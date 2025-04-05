@@ -16,6 +16,7 @@ This project creates the following AWS resources:
 - Terraform >= 1.0 ([Install Guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
 - AWS CLI configured with appropriate credentials
 - Docker installed (for building the container image)
+- **An existing S3 bucket** for storing Terraform state (specified in `terraform/main.tf`). This bucket must exist *before* you run `terraform init`.
 
 ## Quick Start
 
@@ -61,6 +62,7 @@ This project creates the following AWS resources:
    - `prod` workspace: `env:/prod/PROJECT_NAME/terraform.tfstate`
 
 3. **Initialize Terraform**:
+   **Note:** Ensure the S3 bucket specified in `terraform/main.tf` exists before running this command.
    ```bash
    cd terraform
    terraform init
