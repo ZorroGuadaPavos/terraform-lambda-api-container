@@ -7,13 +7,13 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project, used for resource naming"
   type        = string
-  default     = "tastethis"
+  default     = "PROJECT_NAME"
 }
 
 variable "company_name" {
   description = "The name of the company"
   type        = string
-  default     = "dijkwater"
+  default     = "COMPANY_NAME"
 }
 
 

@@ -13,7 +13,7 @@ This project creates the following AWS resources:
 
 ## Requirements
 
-- Terraform >= 1.0
+- Terraform >= 1.0 ([Install Guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
 - AWS CLI configured with appropriate credentials
 - Docker installed (for building the container image)
 
@@ -25,33 +25,56 @@ This project creates the following AWS resources:
    cd terraform-lambda-api-container
    ```
 
-2. **Initialize Terraform with environment-specific backend**:
-   ```bash
-   # For development environment
-   terraform init -backend-config="./terraform/config/dev.config"
+2. **Update configuration**:
+   Edit `terraform/main.tf` to update the S3 bucket configuration:
+   ```terraform
+   terraform {
+     backend "s3" {
+       bucket         = "COMPANY_NAME-core-terraform-state"  # Replace with your company name
+       key            = "PROJECT_NAME/terraform.tfstate"     # Replace with your project name
+       region         = "eu-west-3"
+       use_lockfile   = true
+     }
+   }
+   ```
    
-   # For production environment
-   terraform init -backend-config="./terraform/config/prd.config"
+   Also update the variables in `terraform/variables.tf`:
+   ```terraform
+   variable "company_name" {
+     description = "The name of the company"
+     type        = string
+     default     = "COMPANY_NAME"  # Replace with your company name
+   }
+   
+   variable "project_name" {
+     description = "Name of the project, used for resource naming"
+     type        = string
+     default     = "PROJECT_NAME"  # Replace with your project name
+   }
    ```
 
-3. **Select or create workspace for environment**:
+   This ensures that both your S3 state storage and your resource names use consistent naming conventions.
+   
+   Terraform automatically handles creating separate state files for each workspace in S3:
+   - Default workspace: `PROJECT_NAME/terraform.tfstate`
+   - `dev` workspace: `env:/dev/PROJECT_NAME/terraform.tfstate`
+   - `prod` workspace: `env:/prod/PROJECT_NAME/terraform.tfstate`
+
+3. **Initialize Terraform**:
    ```bash
-   # View available workspaces
-   terraform workspace list
-   
-   # Create new workspace if needed
-   terraform workspace new dev
-   
-   # Select existing workspace
-   terraform workspace select dev
+   cd terraform
+   terraform init
    ```
 
-4. **Deploy the infrastructure**:
+4. **Select or create workspace for environment**:
+   See the [Working with Environments](#working-with-environments) section below for details on using Terraform workspaces.
+
+5. **Deploy the infrastructure**:
    ```bash
    terraform apply
    ```
 
-5. **Test the API**:
+6. **Test the API**:
    ```bash
    curl $(terraform output -raw api_endpoint)
    ```
@@ -60,38 +83,32 @@ This project creates the following AWS resources:
 
 This project uses Terraform workspaces to manage different environments (dev, staging, prod, etc.). Each workspace maintains its own separate state file, allowing you to have different configurations for each environment.
 
-### Backend Configuration
+### Managing Workspaces
 
-We use partial backend configuration to keep environment-specific settings separate from the main configuration. The backend configuration files are stored in the `./terraform/config/` directory:
+Terraform workspaces allow you to manage multiple distinct states for the same configuration (e.g., `dev`, `stag`, `prod`).
 
-- `dev.config`: Development environment backend settings
-- `prd.config`: Production environment backend settings
+- **List workspaces:** `terraform workspace list`
+- **Create a new workspace:** `terraform workspace new <workspace_name>`
+- **Select a workspace:** `terraform workspace select <workspace_name>`
+- **Delete a workspace:** `terraform workspace delete <workspace_name>`
 
-These files contain the S3 bucket details where Terraform state is stored for each environment.
+**Only delete a workspace if you are absolutely sure you no longer need the state file and have already destroyed the associated infrastructure (`terraform destroy`) or plan to manage it differently.**
 
-To work with a specific environment, you need to:
 
-1. Initialize with the appropriate backend configuration
-2. Select the corresponding workspace
-3. Apply changes to that environment
-
-Example workflow for development:
+Example workflow:
 
 ```bash
-terraform init -backend-config="./terraform/config/dev.config"
+# Initialize Terraform
+terraform init
+# Create and select a workspace for development
+terraform workspace new dev
+# Or select an existing workspace
 terraform workspace select dev
+# Apply changes to that environment
 terraform apply
 ```
 
-Example workflow for production:
-
-```bash
-terraform init -backend-config="./terraform/config/prd.config"
-terraform workspace select prod
-terraform apply
-```
-
-For more information on partial backend configuration, see the [Terraform documentation](https://developer.hashicorp.com/terraform/language/backend#partial-configuration).
+For more information on workspaces, see the [Terraform documentation](https://developer.hashicorp.com/terraform/language/state/workspaces).
 
 ## Project Structure
 
@@ -103,9 +120,6 @@ For more information on partial backend configuration, see the [Terraform docume
 │   └── src/               # Source code files
 │       └── index.js       # Lambda handler function
 ├── terraform/             # Terraform configuration files
-│   ├── config/            # Environment-specific backend configs
-│   │   ├── dev.config     # Development environment config
-│   │   └── prd.config     # Production environment config
 │   ├── main.tf            # Main Terraform configuration
 │   ├── variables.tf       # Variable definitions
 │   ├── outputs.tf         # Output definitions
@@ -196,41 +210,6 @@ Note that your actual API routing logic is still handled by the Hono framework i
 
 ## Troubleshooting
 
-### Provider Errors
-
-If you encounter errors related to missing providers when running `terraform apply`, try the following:
-
-1. Ensure all required providers are configured in `versions.tf`:
-   ```terraform
-   terraform {
-     required_providers {
-       aws = {
-         source  = "hashicorp/aws"
-         version = ">= 5.79"
-       }
-       docker = {
-         source  = "kreuzwerker/docker"
-         version = ">= 3.0"
-       }
-       archive = {
-         source  = "hashicorp/archive"
-         version = ">= 2.0.0"
-       }
-     }
-   }
-   ```
-
-2. Re-initialize Terraform with the correct backend configuration:
-   ```bash
-   terraform init -backend-config="./terraform/config/dev.config"
-   ```
-
-3. If you're still experiencing issues, try removing the `.terraform` directory and re-initializing:
-   ```bash
-   rm -rf .terraform
-   terraform init -backend-config="./terraform/config/dev.config"
-   ```
-
 ### Docker Issues
 
 If you encounter Docker-related errors:
@@ -247,9 +226,9 @@ If you encounter Docker-related errors:
 
 If you're having issues with the backend configuration:
 
-1. Ensure your AWS credentials have access to the S3 bucket specified in the config files
+1. Ensure your AWS credentials have access to the S3 bucket specified in the backend configuration
 2. Verify that the bucket exists in the specified region
-3. Check for typos in the bucket name, key, or region in your config files
+3. Check for typos in the bucket name, key, or region
 
 ## Cleanup
 
