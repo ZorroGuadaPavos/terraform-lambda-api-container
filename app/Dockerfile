@@ -10,4 +10,4 @@ RUN cd ${LAMBDA_TASK_ROOT} && npm install
 COPY . ${LAMBDA_TASK_ROOT}/
 
 # Set the CMD to your handler
-CMD [ "src/index.handler" ] 
+CMD [ "src/index.handler" ]
