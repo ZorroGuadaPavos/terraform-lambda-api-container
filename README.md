@@ -239,21 +239,3 @@ To remove all resources created by this project:
 ```bash
 terraform destroy
 ```
-
-## Tags
-
-All resources are tagged with:
-- `Environment = "${terraform.workspace}"`
-- `ManagedBy = "Terraform"`
-- `Project = "${var.project_name}"`
-- `Company = "${var.company_name}"`
-
-You can filter resources with these tags in the AWS Console using Resource Groups & Tag Editor.
-
-To find all resources with these tags using the AWS CLI:
-
-```bash
-aws resourcegroupstaggingapi get-resources \
-  --tag-filters Key=Project,Values=${var.project_name} Key=Environment,Values=${terraform.workspace} \
-  --region ${var.aws_region}
-```
