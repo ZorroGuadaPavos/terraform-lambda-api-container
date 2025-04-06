@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
-    bucket         = "COMPANY_NAME-core-terraform-state"
-    key            = "PROJECT_NAME/terraform.tfstate"
+    bucket         = "dijkwater-core-terraform-state"
+    key            = "tastethis/terraform.tfstate"
     region         = "eu-west-3"
     use_lockfile   = true
   }
