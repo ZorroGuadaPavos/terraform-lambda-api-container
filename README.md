@@ -14,7 +14,8 @@ This project creates the following AWS resources:
 ## Requirements
 
 - Terraform >= 1.0 ([Install Guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
-- AWS CLI configured with appropriate credentials
+- AWS CLI configured with appropriate credentials for local execution (e.g., via `aws configure`). [See AWS CLI configuration guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
+- For deployment via GitHub Actions, see the separate guide: [GITHUB_ACTIONS_AWS_CREDENTIALS.md](./GITHUB_ACTIONS_AWS_CREDENTIALS.md).
 - Docker installed (for building the container image)
 - **An existing S3 bucket** for storing Terraform state (specified in `terraform/main.tf`). This bucket must exist *before* you run `terraform init`.
 
