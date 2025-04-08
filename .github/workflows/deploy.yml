@@ -1,14 +1,14 @@
 name: Deploy App
 
 on:
-  push:
-    branches: 
-      - main
-      - feat/auto-deploy
-    paths:
-      - 'app/**'
-      - 'terraform/**'
-      - '.github/**'
+  # push:
+  #   branches: 
+  #     - main
+  #     - feat/auto-deploy
+  #   paths:
+  #     - 'app/**'
+  #     - 'terraform/**'
+  #     - '.github/**'
   workflow_dispatch:
     inputs:
       branch:
