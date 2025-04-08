@@ -98,7 +98,6 @@ Terraform workspaces allow you to manage multiple distinct states for the same c
 
 **Only delete a workspace if you are absolutely sure you no longer need the state file and have already destroyed the associated infrastructure (`terraform destroy`) or plan to manage it differently.**
 
-
 Example workflow:
 
 ```bash
@@ -116,7 +115,7 @@ For more information on workspaces, see the [Terraform documentation](https://de
 
 ## Project Structure
 
-```
+```txt
 .
 ├── app/                   # Lambda function source code
 │   ├── Dockerfile         # Docker configuration for Lambda

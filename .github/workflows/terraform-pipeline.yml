@@ -22,7 +22,7 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     outputs:
-      plan_output: ${{ steps.plan.outputs.stdout }}
+      plan_output: ${{ steps.plan.outputs.plan_output }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,14 +56,14 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          PLAN=$(terraform plan -no-color)
+          terraform plan -no-color > plan.txt
           echo "plan_output<<EOF" >> $GITHUB_OUTPUT
-          echo "$PLAN" >> $GITHUB_OUTPUT
+          cat plan.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
         working-directory: ./terraform
         continue-on-error: true
 
       - name: Terraform Apply
-        if: !inputs.dry_run && (steps.plan.exitcode == 0 || steps.plan.exitcode == 2)
+        if: inputs.dry_run != true && (steps.plan.conclusion == 'success' || steps.plan.conclusion == 'skipped')
         run: terraform apply -auto-approve
         working-directory: ./terraform 
