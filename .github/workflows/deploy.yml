@@ -64,12 +64,15 @@ jobs:
     needs: plan_prd
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
     steps:
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.token }}
-          approvers: albervico@hotmail.com,4ndres.or@gmail.com
+          approvers: a-vico,ZorroGuadaPavos
           minimum-approvals: 1
           issue-title: "Approve Production Deployment"
           issue-body: |
