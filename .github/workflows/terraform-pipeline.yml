@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 
 jobs:
   terraform:
@@ -43,7 +48,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
+          aws-region: ${{ steps.get_region.outputs.region }}
 
       - name: Terraform Init
         run: terraform init -backend-config="./config/backend.config"
