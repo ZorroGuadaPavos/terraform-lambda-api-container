@@ -2,46 +2,84 @@ name: Deploy App
 
 on:
   push:
-    # branches: [ main ]
-    branches: [ '**' ]
+    branches: 
+      - main
     paths:
       - 'app/**'
       - 'terraform/**'
       - '.github/**'
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'main'
+        type: string
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'prd'
+        type: choice
+        options:
+          - prd
+          - dev
+      destroy:
+        description: 'Destroy the environment'
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: 'Run in plan-only mode (no apply)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  deploy:
+  deploy_dev:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    uses: ./.github/workflows/terraform-pipeline.yml
+    with:
+      environment: 'dev'
+      destroy: ${{ github.event.inputs.destroy }}
+      dry_run: ${{ github.event.inputs.dry_run }}
+
+  plan_prd:
+    needs: deploy_dev
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
+    uses: ./.github/workflows/terraform-pipeline.yml
+    with:
+      environment: 'prd'
+      destroy: ${{ github.event.inputs.destroy }}
+      dry_run: true
+
+  approve_prd:
+    needs: plan_prd
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Manual Approval
+        uses: trstringer/manual-approval@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
+          secret: ${{ github.token }}
+          approvers: albervico@hotmail.com,4ndres.or@gmail.com #${{ secrets.PRD_APPROVERS }}
+          minimum-approvals: 1
+          issue-title: "Approve Production Deployment"
+          issue-body: |
+            A production deployment is pending approval.
+            
+            Terraform Plan:
+            ```
+            ${{ needs.plan_prd.outputs.terraform.outputs.plan_output }}
+            ```
+            
+            To approve, comment with `/approve`
+            To reject, comment with `/reject`
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: ./terraform
-
-      - name: Select Prod Workspace
-        run: terraform workspace select prod || terraform workspace new prod
-        working-directory: ./terraform
-
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color
-        working-directory: ./terraform
-        continue-on-error: true
-
-      - name: Terraform Apply
-        if: steps.plan.exitcode == 0 || steps.plan.exitcode == 2
-        run: terraform apply -auto-approve
-        working-directory: ./terraform
+  deploy_prd:
+    needs: [deploy_dev, approve_prd]
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
+    uses: ./.github/workflows/terraform-pipeline.yml
+    with:
+      environment: 'prd'
+      destroy: ${{ github.event.inputs.destroy }}
+      dry_run: false
