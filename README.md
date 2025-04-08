@@ -16,30 +16,28 @@ This project creates the following AWS resources:
 - Terraform >= 1.0 ([Install Guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
 - AWS CLI configured with appropriate credentials
 - Docker installed (for building the container image)
-- **An existing S3 bucket** for storing Terraform state (specified in `terraform/main.tf`). This bucket must exist *before* you run `terraform init`.
+- **An existing S3 bucket** for storing Terraform state (specified in `backend_config/*.config` files). This bucket must exist *before* you run `terraform init`.
 
 ## Quick Start
 
 1. **Clone this repository**:
+
    ```bash
    git clone <repository-url>
    cd terraform-lambda-api-container
    ```
 
 2. **Update configuration**:
-   Edit `terraform/main.tf` to update the S3 bucket configuration:
-   ```terraform
-   terraform {
-     backend "s3" {
-       bucket         = "COMPANY_NAME-core-terraform-state"  # Replace with your company name
-       key            = "PROJECT_NAME/terraform.tfstate"     # Replace with your project name
-       region         = "eu-west-3"
-       use_lockfile   = true
-     }
-   }
+   Edit `backend_config/*.config` files to update the backend S3 bucket configuration (see [Terraform partial configuration docs](https://developer.hashicorp.com/terraform/language/backend#partial-configuration)):
+
+   ```config
+    bucket = "BUCKET_NAME" 
+    key    = "PROJECT_NAME/terraform.tfstate"
+    region = "AWS_REGION"
    ```
-   
+
    Also update the variables in `terraform/variables.tf`:
+
    ```terraform
    variable "company_name" {
      description = "The name of the company"
@@ -55,28 +53,31 @@ This project creates the following AWS resources:
    ```
 
    This ensures that both your S3 state storage and your resource names use consistent naming conventions.
-   
+
    Terraform automatically handles creating separate state files for each workspace in S3:
    - Default workspace: `PROJECT_NAME/terraform.tfstate`
    - `dev` workspace: `env:/dev/PROJECT_NAME/terraform.tfstate`
    - `prod` workspace: `env:/prod/PROJECT_NAME/terraform.tfstate`
 
 3. **Initialize Terraform**:
-   **Note:** Ensure the S3 bucket specified in `terraform/main.tf` exists before running this command.
+   **Note:** Ensure the S3 bucket specified in `terraform/main.tf` exists before running this command:
+
    ```bash
    cd terraform
-   terraform init
+   terraform init -backend-config="./config/backend.config"
    ```
 
 4. **Select or create workspace for environment**:
    See the [Working with Environments](#working-with-environments) section below for details on using Terraform workspaces.
 
 5. **Deploy the infrastructure**:
+
    ```bash
    terraform apply
    ```
 
 6. **Test the API**:
+
    ```bash
    curl $(terraform output -raw api_endpoint)
    ```
@@ -101,7 +102,7 @@ Example workflow:
 
 ```bash
 # Initialize Terraform
-terraform init
+terraform init -backend-config="./config/backend.config"
 # Create and select a workspace for development
 terraform workspace new dev
 # Or select an existing workspace
@@ -122,6 +123,8 @@ For more information on workspaces, see the [Terraform documentation](https://de
 │   └── src/               # Source code files
 │       └── index.js       # Lambda handler function
 ├── terraform/             # Terraform configuration files
+│   └── config/            # Config files
+│       └── backend.config # Terraform backend configuration
 │   ├── main.tf            # Main Terraform configuration
 │   ├── variables.tf       # Variable definitions
 │   ├── outputs.tf         # Output definitions
@@ -158,102 +161,4 @@ To view the Lambda function logs, use the included helper script:
 
 ```bash
 ./view-logs.sh
-```
-
-For more detailed logs:
-
-```bash
-./view-logs.sh --full
-```
-
-## Customization
-
-### Adding Environment Variables
-
-The Lambda function already includes the `ENVIRONMENT` variable set to the current workspace name. You can add more environment variables by modifying the `environment_variables` block in the Lambda module:
-
-```terraform
-environment_variables = {
-  ENVIRONMENT = terraform.workspace
-  DEBUG       = "true"
-  API_VERSION = "1.0"
-}
-```
-
-### Adding API Routes
-
-The API Gateway is configured with a `$default` catch-all route that forwards all requests to the Lambda function. However, you can define specific routes for more granular control over API behavior:
-
-```terraform
-integrations = {
-  "$default" = {
-    lambda_arn = module.lambda_function.lambda_function_arn
-  }
-  "GET /api/example" = {
-    lambda_arn = module.lambda_function.lambda_function_arn
-    throttling_rate_limit  = 10    # Requests per second
-    throttling_burst_limit = 5     # Concurrent requests
-  }
-  "POST /api/example" = {
-    lambda_arn = module.lambda_function.lambda_function_arn
-    authorization_type = "JWT"     # Add authorization
-  }
-}
-```
-
-This approach is useful when you need to:
-- Apply different throttling rates to protect specific endpoints
-- Configure authorization for certain routes only
-- Add request validation or transformations to specific endpoints
-- Route different endpoints to separate Lambda functions (for microservices)
-- Set up detailed metrics and logging per endpoint
-
-Note that your actual API routing logic is still handled by the Hono framework in your Lambda function code.
-
-## Troubleshooting
-
-### Docker Issues
-
-If you encounter Docker-related errors:
-
-1. Make sure Docker Desktop is running
-2. Check if your user has permissions to use Docker
-3. Try building the Docker image manually to debug any issues:
-   ```bash
-   cd app
-   docker build -t lambda-test .
-   ```
-
-### Backend Configuration Issues
-
-If you're having issues with the backend configuration:
-
-1. Ensure your AWS credentials have access to the S3 bucket specified in the backend configuration
-2. Verify that the bucket exists in the specified region
-3. Check for typos in the bucket name, key, or region
-
-## Cleanup
-
-To remove all resources created by this project:
-
-```bash
-terraform destroy
-```
-
-## Tags
-
-All resources are tagged with:
-- `Environment = "${terraform.workspace}"`
-- `ManagedBy = "Terraform"`
-- `Project = "${var.project_name}"`
-- `Company = "${var.company_name}"`
-
-You can filter resources with these tags in the AWS Console using Resource Groups & Tag Editor.
-
-To find all resources with these tags using the AWS CLI:
-
-```bash
-aws resourcegroupstaggingapi get-resources \
-  --tag-filters Key=Project,Values=${var.project_name} Key=Environment,Values=${terraform.workspace} \
-  --region ${var.aws_region}
 ```
