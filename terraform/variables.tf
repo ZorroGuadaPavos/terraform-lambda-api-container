@@ -7,13 +7,20 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project, used for resource naming"
   type        = string
-  default     = "lambda-api"
+  default     = "tastethis"
 }
+
+variable "company_name" {
+  description = "The name of the company"
+  type        = string
+  default     = "dijkwater"
+}
+
 
 variable "source_path" {
   description = "Path to the Lambda function source code"
   type        = string
-  default     = "lambda"
+  default     = "../app"
 }
 
 variable "path_include" {
@@ -28,19 +35,6 @@ variable "path_exclude" {
   default     = ["**/__pycache__/**"]
 }
 
-variable "lambda_architecture" {
-  description = "Lambda function architecture"
-  type        = list(string)
-  default     = ["x86_64"]
-}
-
-variable "lambda_environment_variables" {
-  description = "Environment variables for Lambda function"
-  type        = map(string)
-  default     = {
-    NODE_ENV = "production"
-  }
-}
 
 variable "ecr_repo_max_images" {
   description = "Maximum number of images to keep in ECR repository"
@@ -52,15 +46,6 @@ variable "docker_platform" {
   description = "Platform for Docker image build"
   type        = string
   default     = "linux/x86_64"
-}
-
-variable "ecr_tags" {
-  description = "Tags for the ECR repository"
-  type        = map(string)
-  default     = {
-    Environment = "prod"
-    ManagedBy   = "terraform"
-  }
 }
 
 variable "log_retention_days" {
