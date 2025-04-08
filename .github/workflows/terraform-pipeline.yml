@@ -61,14 +61,23 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          terraform plan -no-color > plan.txt
+          if [[ "${{ inputs.destroy }}" == "true" ]]; then
+            terraform plan -destroy -no-color > plan.txt
+          else
+            terraform plan -no-color > plan.txt
+          fi
           echo "plan_output<<EOF" >> $GITHUB_OUTPUT
           cat plan.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
         working-directory: ./terraform
         continue-on-error: true
 
-      - name: Terraform Apply
+      - name: Terraform Apply or Destroy
         if: inputs.dry_run != true && steps.plan.outcome == 'success'
-        run: terraform apply -auto-approve
+        run: |
+          if [[ "${{ inputs.destroy }}" == "true" ]]; then
+            terraform destroy -auto-approve
+          else
+            terraform apply -auto-approve
+          fi
         working-directory: ./terraform 
