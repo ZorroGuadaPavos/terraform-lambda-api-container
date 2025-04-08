@@ -64,6 +64,6 @@ jobs:
         continue-on-error: true
 
       - name: Terraform Apply
-        if: inputs.dry_run != true
+        if: inputs.dry_run != true && steps.plan.outcome == 'success'
         run: terraform apply -auto-approve
         working-directory: ./terraform 
