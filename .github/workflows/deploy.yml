@@ -44,8 +44,8 @@ jobs:
     with:
       branch: ${{ github.event.inputs.branch || github.ref }}
       environment: 'dev'
-      destroy: ${{ github.event.inputs.destroy || false }}
-      dry_run: ${{ github.event.inputs.dry_run || false }}
+      destroy: ${{ github.event.inputs.destroy == 'true' }}
+      dry_run: ${{ github.event.inputs.dry_run == 'true' }}
 
   plan_prd:
     name: Plan Production
@@ -56,7 +56,7 @@ jobs:
     with:
       branch: ${{ github.event.inputs.branch || github.ref }}
       environment: 'prd'
-      destroy: ${{ github.event.inputs.destroy || false }}
+      destroy: ${{ github.event.inputs.destroy == 'true' }}
       dry_run: true
 
   approve_prd:
@@ -95,5 +95,5 @@ jobs:
     with:
       branch: ${{ github.event.inputs.branch || github.ref }}
       environment: 'prd'
-      destroy: ${{ github.event.inputs.destroy || false }}
+      destroy: ${{ github.event.inputs.destroy == 'true' }}
       dry_run: false
