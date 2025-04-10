@@ -23,6 +23,6 @@ jobs:
     uses: ./.github/workflows/terraform-pipeline.yml
     secrets: inherit
     with:
-      branch: ${{ github.event.inputs.branch || github.ref }}
+      branch: ${{ github.event.inputs.branch }}
       environment: ${{ github.event.inputs.environment }}
       destroy: true
