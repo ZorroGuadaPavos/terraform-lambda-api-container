@@ -14,7 +14,8 @@ This project creates the following AWS resources:
 ## Requirements
 
 - Terraform >= 1.0 ([Install Guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
-- AWS CLI configured with appropriate credentials
+- AWS CLI configured with appropriate credentials for local execution (e.g., via `aws configure`). [See AWS CLI configuration guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
+- For deployment via GitHub Actions, see the separate guide: [GITHUB_ACTIONS_AWS_CREDENTIALS.md](./GITHUB_ACTIONS_AWS_CREDENTIALS.md).
 - Docker installed (for building the container image)
 - **An existing S3 bucket** for storing Terraform state (specified in `backend_config/*.config` files). This bucket must exist *before* you run `terraform init`.
 
@@ -97,7 +98,6 @@ Terraform workspaces allow you to manage multiple distinct states for the same c
 
 **Only delete a workspace if you are absolutely sure you no longer need the state file and have already destroyed the associated infrastructure (`terraform destroy`) or plan to manage it differently.**
 
-
 Example workflow:
 
 ```bash
@@ -115,7 +115,7 @@ For more information on workspaces, see the [Terraform documentation](https://de
 
 ## Project Structure
 
-```
+```txt
 .
 ├── app/                   # Lambda function source code
 │   ├── Dockerfile         # Docker configuration for Lambda

@@ -1,0 +1,79 @@
+name: Terraform Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      destroy:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    outputs:
+      plan_output: ${{ steps.plan.outputs.plan_output }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Get AWS Region from config
+        id: get_region
+        run: |
+          REGION=$(grep -oP 'region\s*=\s*"\K[^"]+' terraform/config/backend.config)
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.get_region.outputs.region }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="./config/backend.config"
+        working-directory: ./terraform
+
+      - name: Select Workspace
+        run: terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+        working-directory: ./terraform
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          if [[ "${{ inputs.destroy }}" == "true" ]]; then
+            terraform plan -destroy -no-color > plan.txt
+          else
+            terraform plan -no-color > plan.txt
+          fi
+          echo "plan_output<<EOF" >> $GITHUB_OUTPUT
+          cat plan.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        working-directory: ./terraform
+        continue-on-error: true
+
+      - name: Terraform Apply
+        if: steps.plan.outcome == 'success' && inputs.destroy != true
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Terraform Destroy
+        if: steps.plan.outcome == 'success' && inputs.destroy == true
+        run: terraform destroy -auto-approve
+        working-directory: ./terraform
