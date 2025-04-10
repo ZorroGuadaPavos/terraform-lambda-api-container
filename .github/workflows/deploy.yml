@@ -1,99 +1,20 @@
-name: Deploy App
+name: Deploy App DEV
 
 on:
-  # push:
-  #   branches: 
-  #     - main
-  #     - feat/auto-deploy
-  #   paths:
-  #     - 'app/**'
-  #     - 'terraform/**'
-  #     - '.github/**'
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to deploy from'
-        required: true
-        default: 'main'
-        type: string
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-          - prd
-          - dev
-      destroy:
-        description: 'Destroy the environment'
-        required: false
-        default: false
-        type: boolean
-      dry_run:
-        description: 'Run in plan-only mode (no apply)'
-        required: false
-        default: false
-        type: boolean
+  push:
+    branches: 
+      - main
+    paths:
+      - 'app/**'
+      - 'terraform/**'
+      - '.github/**'
 
 jobs:
   deploy_dev:
     name: Deploy dev
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
     uses: ./.github/workflows/terraform-pipeline.yml
     secrets: inherit
     with:
-      branch: ${{ github.event.inputs.branch || github.ref }}
+      branch: ${{ github.ref }}
       environment: 'dev'
-      destroy: ${{ github.event.inputs.destroy == 'true' }}
-      dry_run: ${{ github.event.inputs.dry_run == 'true' }}
-
-  plan_prd:
-    name: Plan Production
-    needs: deploy_dev
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
-    uses: ./.github/workflows/terraform-pipeline.yml
-    secrets: inherit
-    with:
-      branch: ${{ github.event.inputs.branch || github.ref }}
-      environment: 'prd'
-      destroy: ${{ github.event.inputs.destroy == 'true' }}
-      dry_run: true
-
-  approve_prd:
-    name: Manual Approval
-    needs: plan_prd
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: read
-    steps:
-      - name: Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.token }}
-          approvers: a-vico,ZorroGuadaPavos
-          minimum-approvals: 1
-          issue-title: "Approve Production Deployment"
-          issue-body: |
-            A production deployment is pending approval.
-            
-            Terraform Plan: 
-            ```
-            ${{ needs.plan_prd.outputs.plan_output }}
-            ```
-            
-            To approve, comment with `/approve`
-            To reject, comment with `/reject`
-
-  deploy_prd:
-    name: Deploy Production
-    needs: approve_prd
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prd')
-    uses: ./.github/workflows/terraform-pipeline.yml
-    secrets: inherit
-    with:
-      branch: ${{ github.event.inputs.branch || github.ref }}
-      environment: 'prd'
-      destroy: ${{ github.event.inputs.destroy == 'true' }}
-      dry_run: false
+      destroy: false

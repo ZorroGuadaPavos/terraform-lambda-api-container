@@ -13,10 +13,6 @@ on:
         required: false
         type: boolean
         default: false
-      dry_run:
-        required: false
-        type: boolean
-        default: false
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -72,12 +68,12 @@ jobs:
         working-directory: ./terraform
         continue-on-error: true
 
-      - name: Terraform Apply or Destroy
-        if: inputs.dry_run != true && steps.plan.outcome == 'success'
-        run: |
-          if [[ "${{ inputs.destroy }}" == "true" ]]; then
-            terraform destroy -auto-approve
-          else
-            terraform apply -auto-approve
-          fi
-        working-directory: ./terraform 
+      - name: Terraform Apply
+        if: steps.plan.outcome == 'success' && inputs.destroy != true
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Terraform Destroy
+        if: steps.plan.outcome == 'success' && inputs.destroy == true
+        run: terraform destroy -auto-approve
+        working-directory: ./terraform
